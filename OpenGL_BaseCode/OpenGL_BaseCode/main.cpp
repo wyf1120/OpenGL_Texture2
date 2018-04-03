@@ -40,6 +40,8 @@ GLuint textureID;
 
 GLuint textures[3];
 
+GLfloat viewZ = -50.0f;
+
 const char *imageNames[4] = {"brick.tga", "ceiling.tga", "floor.tga", "stone.tga"};
 
 //窗口大小改变时接受新的宽度和高度，其中0,0代表窗口中视口的左下角坐标，w，h代表像素
@@ -48,12 +50,20 @@ void ChangeSize(int w,int h)
 
 {
     glViewport(0,0, w, h);
+    
+    viewFrustum.SetPerspective(80.0f, float(w)/float(h), 1.0f, 120.0f);
+    projectStack.LoadMatrix(viewFrustum.GetProjectionMatrix());
+    transformPipline.SetMatrixStacks(modelviewStack, projectStack);
 }
 
 //为程序作一次性的设置
 
 void SetupRC()
 {
+    glClearColor(0, 0, 0, 1);
+    shaderManager.InitializeStockShaders();
+    glEnable(GL_DEPTH_TEST);
+    
     GLbyte *pbits;
     GLint iwidth, iheight, icomponent, iloop;
     GLenum format;
@@ -61,7 +71,7 @@ void SetupRC()
     //分配纹理对象
     glGenTextures(3, textures);
     
-    for (iloop; iloop < 3; iloop++) {
+    for (iloop = 0; iloop < 3; iloop++) {
         //绑定纹理
         glBindTexture(GL_TEXTURE_2D, textures[iloop]);
         
@@ -84,6 +94,84 @@ void SetupRC()
         
     }
     
+    
+    GLfloat z;
+    
+    /*
+     void Begin(GLenum primitive, GLuint nVerts, GLuint nTextureUnits = 0);
+     参数1:绘图模式
+     参数2:顶点个数
+     参数3:纹理,默认等于0
+     */
+    bottomBatch.Begin(GL_TRIANGLE_STRIP, 28,1);
+    
+    //参考PPT
+    for (z = 60.0f; z >= 0.0f; z -= 10.0f) {
+        
+        //指定左下角顶点
+        bottomBatch.Vertex3f(-10.0f, -10.0f, z);
+        //指定顶点对应纹理的坐标
+        bottomBatch.MultiTexCoord2f(0, 0, 0);
+        
+        //指定右下角顶点以及纹理坐标
+        bottomBatch.Vertex3f(10.0f, -10.0f, z);
+        bottomBatch.MultiTexCoord2f(0, 1, 0);
+        
+        
+        bottomBatch.Vertex3f(-10.0f, -10.0f, z-10.0f);
+        //指定顶点对应纹理的坐标
+        bottomBatch.MultiTexCoord2f(0, 0, 1.0f);
+        
+        
+        bottomBatch.Vertex3f(10.0f, -10.0f, z-10.0f);
+        //指定顶点对应纹理的坐标
+        bottomBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        
+    }
+    
+    bottomBatch.End();
+    
+    //参考PPT图6-11
+    topBatch.Begin(GL_TRIANGLE_STRIP, 28, 1);
+    for(z = 60.0f; z >= 0.0f; z -=10.0f)
+    {
+        topBatch.MultiTexCoord2f(0, 0.0f, 1.0f);
+        topBatch.Vertex3f(-10.0f, 10.0f, z - 10.0f);
+        
+        topBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        topBatch.Vertex3f(10.0f, 10.0f, z - 10.0f);
+        
+        topBatch.MultiTexCoord2f(0, 0.0f, 0.0f);
+        topBatch.Vertex3f(-10.0f, 10.0f, z);
+        
+        topBatch.MultiTexCoord2f(0, 1.0f, 0.0f);
+        topBatch.Vertex3f(10.0f, 10.0f, z);
+    }
+    topBatch.End();
+    
+    //参考PPT图6-12
+    
+    
+    //参考PPT图6-13
+    rightBatch.Begin(GL_TRIANGLE_STRIP, 28, 1);
+    for(z = 60.0f; z >= 0.0f; z -=10.0f)
+    {
+        rightBatch.MultiTexCoord2f(0, 0.0f, 0.0f);
+        rightBatch.Vertex3f(10.0f, -10.0f, z);
+        
+        rightBatch.MultiTexCoord2f(0, 0.0f, 1.0f);
+        rightBatch.Vertex3f(10.0f, 10.0f, z);
+        
+        rightBatch.MultiTexCoord2f(0, 1.0f, 0.0f);
+        rightBatch.Vertex3f(10.0f, -10.0f, z - 10.0f);
+        
+        rightBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        rightBatch.Vertex3f(10.0f, 10.0f, z - 10.0f);
+    }
+    rightBatch.End();
+    
+    
+    /*
     GLfloat z;
     
     bottomBatch.Begin(GL_TRIANGLE_STRIP, 40,1);
@@ -107,13 +195,71 @@ void SetupRC()
         bottomBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
         
     }
+    bottomBatch.End();
+    
+    rightBatch.Begin(GL_TRIANGLE_STRIP, 40,1);
+    
+    for (z = 0.0f; z < 100.0f; z += 10.0f) {
+        
+        rightBatch.Vertex3f(10.0f, -10.0f, z);
+        rightBatch.MultiTexCoord2f(0, 0, 0);
+        
+        rightBatch.Vertex3f(10.0f, 10.0f, z);
+        rightBatch.MultiTexCoord2f(0, 0, 1.0f);
+        
+        rightBatch.Vertex3f(10.0f, -10.0f, z-10.0f);
+        rightBatch.MultiTexCoord2f(0, 1.0f, 0);
+        
+        rightBatch.Vertex3f(10.0f, 10.0f, z-10.0f);
+        rightBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        
+    }
+    
+    rightBatch.End();
+    
+    leftBatch.Begin(GL_TRIANGLE_STRIP, 40, 1);
+    for(z = 0.0f; z < 100.0f; z += 10.0f)
+    {
+        leftBatch.MultiTexCoord2f(0, 0.0f, 0.0f);
+        leftBatch.Vertex3f(-10.0f, -10.0f, z);
+        
+        leftBatch.MultiTexCoord2f(0, 0.0f, 1.0f);
+        leftBatch.Vertex3f(-10.0f, 10.0f, z);
+        
+        leftBatch.MultiTexCoord2f(0, 1.0f, 0.0f);
+        leftBatch.Vertex3f(-10.0f, -10.0f, z - 10.0f);
+        
+        leftBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        leftBatch.Vertex3f(-10.0f, 10.0f, z - 10.0f);
+    }
+    leftBatch.End();
+     */
 }
 
 //开始渲染
 
 void RenderScene(void)
 {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    modelviewStack.PushMatrix();
     
+    modelviewStack.Translate(0, 0, viewZ);
+    
+    shaderManager.UseStockShader(GLT_SHADER_TEXTURE_REPLACE,transformPipline.GetModelViewMatrix(),0);
+    
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    topBatch.Draw();
+    
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
+    bottomBatch.Draw();
+    
+    glBindTexture(GL_TEXTURE_2D, textures[2]);
+    leftBatch.Draw();
+    rightBatch.Draw();
+    
+    modelviewStack.PopMatrix();
+    
+    glutSwapBuffers();
 }
 
 // 清理…例如删除纹理对象
