@@ -105,6 +105,7 @@ void SetupRC()
         //右上
         bottomBatch.Vertex3f(10.0f, -10.0f, z-10.0f);
         bottomBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
+        
     }
 }
 
